@@ -2,5 +2,8 @@
   <Folder Name="/src/" />
   <Folder Name="/src/backend/">
     <Project Path="src/backend/SmartEnergy.API/SmartEnergy.API.csproj" />
+    <Project Path="src/backend/SmartEnergy.Application/SmartEnergy.Application.csproj" />
+    <Project Path="src/backend/SmartEnergy.Domain/SmartEnergy.Domain.csproj" />
+    <Project Path="src/backend/SmartEnergy.Infrastructure/SmartEnergy.Infrastructure.csproj" />
   </Folder>
 </Solution>

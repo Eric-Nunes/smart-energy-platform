@@ -10,4 +10,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SmartEnergy.Application\SmartEnergy.Application.csproj" />
+    <ProjectReference Include="..\SmartEnergy.Infrastructure\SmartEnergy.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
