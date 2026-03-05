@@ -69,3 +69,7 @@ build/
 
 # Environment
 .env
+
+node_modules/
+dist/
+.env
