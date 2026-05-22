@@ -8,7 +8,7 @@ var mqttSettings = new MqttConfig
     Broker = "0fff694999c9490e9fbd847167c93371.s1.eu.hivemq.cloud",
     Porta = 8883,
     Usuario = "tcc_mqtt",
-    Senha = "Tcc_mqtt@378"
+    Senha = "senha"
 };
 
 var mqttService = new MqttPublisher();

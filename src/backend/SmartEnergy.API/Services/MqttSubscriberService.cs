@@ -29,7 +29,7 @@ namespace SmartEnergy.API.Services
                     // Em vez de options.Uri = "...", usamos o método WithUri
                     o.WithUri("wss://0fff694999c9490e9fbd847167c93371.s1.eu.hivemq.cloud:8884/mqtt");
                 })
-                .WithCredentials("tcc_mqtt", "Tcc_mqtt@378")
+                .WithCredentials("tcc_mqtt", "senha")
                 .WithTlsOptions(o =>
                 {
                     // Necessário para HiveMQ Cloud (porta 8884 geralmente é WSS + TLS)
