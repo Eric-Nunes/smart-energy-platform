@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using SmartEnergy.Infrastructure.Data;
+using SmartEnergy.Infrastructure;
+using SmartEnergy.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,8 +24,6 @@ builder.Services.AddCors(options =>
 // Database (será usado quando criarmos o DbContext)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-
 
 var app = builder.Build();
 
