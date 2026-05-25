@@ -5,7 +5,7 @@ using System.Text.Json;
 
 var mqttSettings = new MqttConfig
 {
-    Broker = "0fff694999c9490e9fbd847167c93371.s1.eu.hivemq.cloud",
+    Broker = "link",
     Porta = 8883,
     Usuario = "tcc_mqtt",
     Senha = "senha"

@@ -27,7 +27,21 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddHostedService<MqttSubscriberService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
 var app = builder.Build();
+
+app.UseCors("AllowFrontend");
 
 // Middlewares
 if (app.Environment.IsDevelopment())

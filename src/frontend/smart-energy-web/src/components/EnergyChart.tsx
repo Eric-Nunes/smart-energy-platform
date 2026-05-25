@@ -5,13 +5,12 @@ type EnergyChartProps = {
   pricePerKwh: number
 }
 
-function getConsumptionLevel(consumption: number, maxValue: number) {
-  const ratio = maxValue ? consumption / maxValue : 0
-
-  if (ratio >= 0.75) return 'high'
-  if (ratio >= 0.45) return 'medium'
+function getConsumptionLevel(consumption: number) {
+  if (consumption >= 4) return 'high'
+  if (consumption >= 2) return 'medium'
   return 'low'
 }
+
 
 export default function EnergyChart({ data, pricePerKwh }: EnergyChartProps) {
   const width = 900
@@ -86,7 +85,7 @@ export default function EnergyChart({ data, pricePerKwh }: EnergyChartProps) {
               {point.label}
             </text>
             <circle
-              className={`chart-dot ${getConsumptionLevel(point.consumption, maxValue)}`}
+              className={`chart-dot ${getConsumptionLevel(point.consumption)}`}
               cx={point.x}
               cy={point.y}
               r="6"

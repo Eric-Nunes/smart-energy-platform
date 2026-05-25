@@ -26,13 +26,11 @@ namespace SmartEnergy.API.Services
             var options = new MqttClientOptionsBuilder()
                 .WithWebSocketServer(o =>
                 {
-                    // Em vez de options.Uri = "...", usamos o método WithUri
-                    o.WithUri("wss://0fff694999c9490e9fbd847167c93371.s1.eu.hivemq.cloud:8884/mqtt");
+                    o.WithUri("wss://link:8884/mqtt");
                 })
                 .WithCredentials("tcc_mqtt", "senha")
                 .WithTlsOptions(o =>
                 {
-                    // Necessário para HiveMQ Cloud (porta 8884 geralmente é WSS + TLS)
                     o.UseTls();
                 })
                 .Build();
@@ -60,11 +58,6 @@ namespace SmartEnergy.API.Services
                     byte[] payloadBytes = payloadSequence.ToArray();
 
                     var payload = System.Text.Encoding.UTF8.GetString(payloadBytes);
-
-                    Console.WriteLine("=================================");
-                    Console.WriteLine($"Topico: {e.ApplicationMessage.Topic}");
-                    Console.WriteLine($"Payload: {payload}");
-                    Console.WriteLine("=================================");
 
                     var dto = JsonSerializer.Deserialize<MedicaoEnergiaDto>(payload);
 
