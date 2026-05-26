@@ -1,13 +1,32 @@
-export type EnergyPeriod = 'day' | 'week' | 'month' | 'year'
+﻿export type EnergyPeriod = 'day' | 'week' | 'month' | 'year'
 
 export type EnergyConsumptionPoint = {
   label: string
   consumption: number
 }
 
-export type DeviceConsumptionPoint = {
+export type ResidenceRoom = {
+  id: string
+  name: string
+}
+
+export type ResidenceUnit = {
+  id: string
+  name: string
+  state: string
+  city: string
+  residents: number
+  rooms: ResidenceRoom[]
+}
+
+export type ManagedDevice = {
+  id: string
   device: string
+  room: string
+  residenceId: string
+  smartPlugName: string
   consumption: number
+  history: EnergyConsumptionPoint[]
 }
 
 const API_BASE_URL = 'http://localhost:5092'
@@ -26,7 +45,7 @@ const fallbackData: Record<EnergyPeriod, EnergyConsumptionPoint[]> = {
     { label: 'Qua', consumption: 15.1 },
     { label: 'Qui', consumption: 14.4 },
     { label: 'Sex', consumption: 16.9 },
-    { label: 'Sab', consumption: 18.7 },
+    { label: 'Sáb', consumption: 18.7 },
     { label: 'Dom', consumption: 17.2 },
   ],
   month: [
@@ -51,39 +70,106 @@ const fallbackData: Record<EnergyPeriod, EnergyConsumptionPoint[]> = {
   ],
 }
 
-const fallbackDeviceData: Record<EnergyPeriod, DeviceConsumptionPoint[]> = {
-  day: [
-    { device: 'Geladeira', consumption: 4.8 },
-    { device: 'Chuveiro', consumption: 6.2 },
-    { device: 'Ar-condicionado', consumption: 7.4 },
-    { device: 'Computador', consumption: 2.1 },
-    { device: 'Televisão', consumption: 1.5 },
-    { device: 'Carregadores', consumption: 0.6 },
-  ],
-  week: [
-    { device: 'Geladeira', consumption: 32.6 },
-    { device: 'Chuveiro', consumption: 38.4 },
-    { device: 'Ar-condicionado', consumption: 46.7 },
-    { device: 'Computador', consumption: 12.3 },
-    { device: 'Televisão', consumption: 9.8 },
-    { device: 'Carregadores', consumption: 4.1 },
-  ],
-  month: [
-    { device: 'Geladeira', consumption: 126 },
-    { device: 'Chuveiro', consumption: 148 },
-    { device: 'Ar-condicionado', consumption: 184 },
-    { device: 'Computador', consumption: 46 },
-    { device: 'Televisão', consumption: 37 },
-    { device: 'Carregadores', consumption: 16 },
-  ],
-  year: [
-    { device: 'Geladeira', consumption: 1512 },
-    { device: 'Chuveiro', consumption: 1776 },
-    { device: 'Ar-condicionado', consumption: 2208 },
-    { device: 'Computador', consumption: 552 },
-    { device: 'Televisão', consumption: 444 },
-    { device: 'Carregadores', consumption: 192 },
-  ],
+function createDeviceHistory(baseValue: number, period: EnergyPeriod): EnergyConsumptionPoint[] {
+  if (period === 'day') {
+    return [
+      { label: '00h-06h', consumption: Number((baseValue * 0.18).toFixed(1)) },
+      { label: '06h-12h', consumption: Number((baseValue * 0.24).toFixed(1)) },
+      { label: '12h-18h', consumption: Number((baseValue * 0.27).toFixed(1)) },
+      { label: '18h-23h', consumption: Number((baseValue * 0.31).toFixed(1)) },
+    ]
+  }
+
+  if (period === 'week') {
+    return [
+      { label: 'Seg', consumption: Number((baseValue * 0.13).toFixed(1)) },
+      { label: 'Ter', consumption: Number((baseValue * 0.12).toFixed(1)) },
+      { label: 'Qua', consumption: Number((baseValue * 0.14).toFixed(1)) },
+      { label: 'Qui', consumption: Number((baseValue * 0.15).toFixed(1)) },
+      { label: 'Sex', consumption: Number((baseValue * 0.16).toFixed(1)) },
+      { label: 'Sáb', consumption: Number((baseValue * 0.17).toFixed(1)) },
+      { label: 'Dom', consumption: Number((baseValue * 0.13).toFixed(1)) },
+    ]
+  }
+
+  if (period === 'month') {
+    return [
+      { label: 'Semana 1', consumption: Number((baseValue * 0.24).toFixed(1)) },
+      { label: 'Semana 2', consumption: Number((baseValue * 0.26).toFixed(1)) },
+      { label: 'Semana 3', consumption: Number((baseValue * 0.23).toFixed(1)) },
+      { label: 'Semana 4', consumption: Number((baseValue * 0.27).toFixed(1)) },
+    ]
+  }
+
+  return [
+    { label: '1º tri', consumption: Number((baseValue * 0.24).toFixed(1)) },
+    { label: '2º tri', consumption: Number((baseValue * 0.22).toFixed(1)) },
+    { label: '3º tri', consumption: Number((baseValue * 0.25).toFixed(1)) },
+    { label: '4º tri', consumption: Number((baseValue * 0.29).toFixed(1)) },
+  ]
+}
+
+const fallbackDeviceBase = [
+  {
+    id: 'device-1',
+    device: 'Geladeira',
+    smartPlugName: 'Plug cozinha 01',
+    residenceId: 'unit-main',
+    room: 'Cozinha',
+    values: { day: 4.8, week: 32.6, month: 126, year: 1512 },
+  },
+  {
+    id: 'device-2',
+    device: 'Chuveiro',
+    smartPlugName: 'Plug banheiro 01',
+    residenceId: 'unit-main',
+    room: 'Banheiro social',
+    values: { day: 6.2, week: 38.4, month: 148, year: 1776 },
+  },
+  {
+    id: 'device-3',
+    device: 'Ar-condicionado',
+    smartPlugName: 'Plug suíte 01',
+    residenceId: 'unit-main',
+    room: 'Suíte',
+    values: { day: 7.4, week: 46.7, month: 184, year: 2208 },
+  },
+  {
+    id: 'device-4',
+    device: 'Computador',
+    smartPlugName: 'Plug escritório 01',
+    residenceId: 'unit-main',
+    room: 'Escritório',
+    values: { day: 2.1, week: 12.3, month: 46, year: 552 },
+  },
+  {
+    id: 'device-5',
+    device: 'Televisão',
+    smartPlugName: 'Plug sala 01',
+    residenceId: 'unit-main',
+    room: 'Sala',
+    values: { day: 1.5, week: 9.8, month: 37, year: 444 },
+  },
+  {
+    id: 'device-6',
+    device: 'Carregadores',
+    smartPlugName: 'Plug quarto 02',
+    residenceId: 'unit-main',
+    room: 'Quarto 2',
+    values: { day: 0.6, week: 4.1, month: 16, year: 192 },
+  },
+]
+
+function buildFallbackDevices(period: EnergyPeriod): ManagedDevice[] {
+  return fallbackDeviceBase.map((item) => ({
+    id: item.id,
+    device: item.device,
+    smartPlugName: item.smartPlugName,
+    residenceId: item.residenceId,
+    room: item.room,
+    consumption: item.values[period],
+    history: createDeviceHistory(item.values[period], period),
+  }))
 }
 
 export async function getEnergyConsumption(period: EnergyPeriod) {
@@ -115,12 +201,12 @@ export async function getDeviceConsumption(period: EnergyPeriod) {
     }
 
     return {
-      data: (await response.json()) as DeviceConsumptionPoint[],
+      data: (await response.json()) as ManagedDevice[],
       source: 'api' as const,
     }
   } catch {
     return {
-      data: fallbackDeviceData[period],
+      data: buildFallbackDevices(period),
       source: 'fallback' as const,
     }
   }

@@ -1,11 +1,33 @@
-export default function SettingsPage() {
+﻿import type { BrazilianStateCode } from '../services/tariffService'
+
+type SettingsState = {
+  defaultState: BrazilianStateCode
+  manualTariff: string
+  monthlyGoal: string
+  automaticSync: boolean
+  readingInterval: string
+}
+
+type SettingsPageProps = {
+  settings: SettingsState
+  onSettingsChange: (settings: SettingsState) => void
+}
+
+export default function SettingsPage({ settings, onSettingsChange }: SettingsPageProps) {
+  function updateField<Key extends keyof SettingsState>(field: Key, value: SettingsState[Key]) {
+    onSettingsChange({
+      ...settings,
+      [field]: value,
+    })
+  }
+
   return (
     <section className="content-page">
       <div className="page-heading">
         <p className="eyebrow">Configurações</p>
         <h1>Preferências da plataforma</h1>
         <p className="header-copy">
-          Ajuste tarifas, notificações e regras usadas nos cálculos da Smart Energy Platform.
+          Ajuste tarifas, notificações e o comportamento da leitura automática das smart plugs.
         </p>
       </div>
 
@@ -15,7 +37,10 @@ export default function SettingsPage() {
           <div className="form-grid two-columns">
             <label>
               Estado padrão
-              <select defaultValue="SP">
+              <select
+                onChange={(event) => updateField('defaultState', event.target.value as BrazilianStateCode)}
+                value={settings.defaultState}
+              >
                 <option value="SP">São Paulo</option>
                 <option value="RJ">Rio de Janeiro</option>
                 <option value="MG">Minas Gerais</option>
@@ -24,11 +49,21 @@ export default function SettingsPage() {
             </label>
             <label>
               Tarifa manual por kWh
-              <input defaultValue="0,91" inputMode="decimal" type="text" />
+              <input
+                inputMode="decimal"
+                onChange={(event) => updateField('manualTariff', event.target.value)}
+                type="text"
+                value={settings.manualTariff}
+              />
             </label>
             <label>
               Meta mensal
-              <input defaultValue="320" min="1" type="number" />
+              <input
+                min="1"
+                onChange={(event) => updateField('monthlyGoal', event.target.value)}
+                type="number"
+                value={settings.monthlyGoal}
+              />
             </label>
             <label>
               Moeda
@@ -74,15 +109,30 @@ export default function SettingsPage() {
                 Sincronização automática
                 <small>Atualizar leituras sem ação manual do usuário.</small>
               </span>
-              <input defaultChecked type="checkbox" />
+              <input
+                checked={settings.automaticSync}
+                onChange={(event) => updateField('automaticSync', event.target.checked)}
+                type="checkbox"
+              />
             </label>
             <label className="integration-field">
               Intervalo de leitura
-              <select defaultValue="15">
+              <select
+                onChange={(event) => updateField('readingInterval', event.target.value)}
+                value={settings.readingInterval}
+              >
                 <option value="5">A cada 5 minutos</option>
                 <option value="15">A cada 15 minutos</option>
                 <option value="30">A cada 30 minutos</option>
                 <option value="60">A cada 1 hora</option>
+              </select>
+            </label>
+            <label className="integration-field">
+              Sincronização automática
+              <select defaultValue="realtime">
+                <option value="realtime">Em tempo quase real</option>
+                <option value="hourly">Em lotes por hora</option>
+                <option value="manual">Somente manual</option>
               </select>
             </label>
             <div className="integration-row">

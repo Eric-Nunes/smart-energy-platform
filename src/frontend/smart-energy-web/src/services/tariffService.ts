@@ -1,4 +1,4 @@
-export type BrazilianStateCode =
+﻿export type BrazilianStateCode =
   | 'AC'
   | 'AL'
   | 'AP'
@@ -27,11 +27,14 @@ export type BrazilianStateCode =
   | 'SE'
   | 'TO'
 
+export type TariffFlag = 'verde' | 'amarela' | 'vermelha'
+
 export type EnergyTariff = {
   state: BrazilianStateCode
   stateName: string
   distributor: string
   pricePerKwh: number
+  flag: TariffFlag
   source: 'api' | 'fallback'
 }
 
@@ -67,6 +70,8 @@ export const stateOptions: Array<{ value: BrazilianStateCode; label: string }> =
   { value: 'TO', label: 'Tocantins' },
 ]
 
+const flags: TariffFlag[] = ['verde', 'amarela', 'vermelha']
+
 const fallbackTariffs: Record<BrazilianStateCode, Omit<EnergyTariff, 'source'>> =
   stateOptions.reduce(
     (tariffs, state, index) => {
@@ -79,6 +84,7 @@ const fallbackTariffs: Record<BrazilianStateCode, Omit<EnergyTariff, 'source'>> 
           stateName: state.label,
           distributor: 'Tarifa residencial estimada',
           pricePerKwh: Number(basePrice.toFixed(2)),
+          flag: flags[index % flags.length],
         },
       }
     },

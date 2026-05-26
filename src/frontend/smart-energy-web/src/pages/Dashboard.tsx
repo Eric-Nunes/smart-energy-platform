@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import AlertsPage from './AlertsPage'
 import DeviceConsumptionChart from '../components/DeviceConsumptionChart'
 import EnergyChart from '../components/EnergyChart'
@@ -9,18 +9,35 @@ import SettingsPage from './SettingsPage'
 import {
   getDeviceConsumption,
   getEnergyConsumption,
-  type DeviceConsumptionPoint,
   type EnergyConsumptionPoint,
   type EnergyPeriod,
+  type ManagedDevice,
+  type ResidenceUnit,
 } from '../services/energyService'
 import {
   getEnergyTariff,
   stateOptions,
   type BrazilianStateCode,
   type EnergyTariff,
+  type TariffFlag,
 } from '../services/tariffService'
 
 type ActivePage = 'dashboard' | 'profile' | 'history' | 'goals' | 'alerts' | 'settings'
+
+type DeviceFormState = {
+  device: string
+  smartPlugName: string
+  residenceId: string
+  room: string
+}
+
+type SettingsState = {
+  defaultState: BrazilianStateCode
+  manualTariff: string
+  monthlyGoal: string
+  automaticSync: boolean
+  readingInterval: string
+}
 
 const periodOptions: Array<{ label: string; value: EnergyPeriod }> = [
   { label: 'Dia', value: 'day' },
@@ -36,6 +53,43 @@ const periodLabels: Record<EnergyPeriod, string> = {
   year: 'evolução mensal do ano',
 }
 
+const initialUnits: ResidenceUnit[] = [
+  {
+    id: 'unit-main',
+    name: 'Residência principal',
+    state: 'SP',
+    city: 'São Paulo',
+    residents: 4,
+    rooms: [
+      { id: 'room-1', name: 'Sala' },
+      { id: 'room-2', name: 'Cozinha' },
+      { id: 'room-3', name: 'Suíte' },
+      { id: 'room-4', name: 'Escritório' },
+      { id: 'room-5', name: 'Banheiro social' },
+    ],
+  },
+  {
+    id: 'unit-beach',
+    name: 'Casa de praia',
+    state: 'SP',
+    city: 'Santos',
+    residents: 2,
+    rooms: [
+      { id: 'room-6', name: 'Varanda' },
+      { id: 'room-7', name: 'Sala integrada' },
+      { id: 'room-8', name: 'Quarto hóspedes' },
+    ],
+  },
+]
+
+const initialSettings: SettingsState = {
+  defaultState: 'SP',
+  manualTariff: '0,91',
+  monthlyGoal: '320',
+  automaticSync: true,
+  readingInterval: '15',
+}
+
 function getConsumptionLevel(total: number, period: EnergyPeriod) {
   const limits: Record<EnergyPeriod, { medium: number; high: number }> = {
     day: { medium: 12, high: 18 },
@@ -45,39 +99,97 @@ function getConsumptionLevel(total: number, period: EnergyPeriod) {
   }
 
   if (total >= limits[period].high) {
-    return {
-      className: 'high',
-      label: 'Alto',
-      description: 'acima do esperado',
-    }
+    return { className: 'high', label: 'Alto', description: 'acima do esperado' }
   }
 
   if (total >= limits[period].medium) {
-    return {
-      className: 'medium',
-      label: 'Moderado',
-      description: 'merece atenção',
-    }
+    return { className: 'medium', label: 'Moderado', description: 'merece atenção' }
+  }
+
+  return { className: 'low', label: 'Eficiente', description: 'faixa saudável' }
+}
+
+function createNewDevice(period: EnergyPeriod, form: DeviceFormState): ManagedDevice {
+  const baseConsumption: Record<EnergyPeriod, number> = {
+    day: 1.2,
+    week: 8.4,
+    month: 34,
+    year: 408,
+  }
+
+  const historyTemplates: Record<EnergyPeriod, EnergyConsumptionPoint[]> = {
+    day: [
+      { label: '00h-06h', consumption: 0.2 },
+      { label: '06h-12h', consumption: 0.3 },
+      { label: '12h-18h', consumption: 0.3 },
+      { label: '18h-23h', consumption: 0.4 },
+    ],
+    week: [
+      { label: 'Seg', consumption: 1.1 },
+      { label: 'Ter', consumption: 1.2 },
+      { label: 'Qua', consumption: 1.1 },
+      { label: 'Qui', consumption: 1.3 },
+      { label: 'Sex', consumption: 1.2 },
+      { label: 'Sáb', consumption: 1.3 },
+      { label: 'Dom', consumption: 1.2 },
+    ],
+    month: [
+      { label: 'Semana 1', consumption: 8.1 },
+      { label: 'Semana 2', consumption: 8.5 },
+      { label: 'Semana 3', consumption: 8.4 },
+      { label: 'Semana 4', consumption: 9 },
+    ],
+    year: [
+      { label: '1º tri', consumption: 94 },
+      { label: '2º tri', consumption: 98 },
+      { label: '3º tri', consumption: 103 },
+      { label: '4º tri', consumption: 113 },
+    ],
   }
 
   return {
-    className: 'low',
-    label: 'Eficiente',
-    description: 'faixa saudável',
+    id: `device-${Date.now()}`,
+    device: form.device,
+    smartPlugName: form.smartPlugName,
+    residenceId: form.residenceId,
+    room: form.room,
+    consumption: baseConsumption[period],
+    history: historyTemplates[period],
   }
+}
+
+function getFlagLabel(flag: TariffFlag) {
+  if (flag === 'verde') return 'Bandeira verde'
+  if (flag === 'amarela') return 'Bandeira amarela'
+  return 'Bandeira vermelha'
 }
 
 export default function Dashboard() {
   const [activePage, setActivePage] = useState<ActivePage>('dashboard')
   const [period, setPeriod] = useState<EnergyPeriod>('day')
-  const [unitName, setUnitName] = useState('Residência principal')
+  const [units, setUnits] = useState<ResidenceUnit[]>(initialUnits)
+  const [selectedUnitId, setSelectedUnitId] = useState(initialUnits[0].id)
   const [selectedState, setSelectedState] = useState<BrazilianStateCode>('SP')
+  const [settings, setSettings] = useState<SettingsState>(initialSettings)
   const [data, setData] = useState<EnergyConsumptionPoint[]>([])
-  const [deviceData, setDeviceData] = useState<DeviceConsumptionPoint[]>([])
+  const [deviceData, setDeviceData] = useState<ManagedDevice[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [source, setSource] = useState<'api' | 'fallback'>('fallback')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [tariff, setTariff] = useState<EnergyTariff | null>(null)
+  const [deviceForm, setDeviceForm] = useState<DeviceFormState>({
+    device: '',
+    smartPlugName: '',
+    residenceId: initialUnits[0].id,
+    room: initialUnits[0].rooms[0]?.name ?? '',
+  })
+
+  const selectedUnit = units.find((unit) => unit.id === selectedUnitId) ?? units[0]
+  const activeDeviceResidence = units.find((unit) => unit.id === deviceForm.residenceId) ?? units[0]
+  const availableDeviceRooms = activeDeviceResidence?.rooms ?? []
+  const selectedDeviceRoom = availableDeviceRooms.some((room) => room.name === deviceForm.room)
+    ? deviceForm.room
+    : availableDeviceRooms[0]?.name ?? ''
 
   useEffect(() => {
     let isCurrentRequest = true
@@ -136,16 +248,125 @@ export default function Dashboard() {
 
     return { total, average, peak, estimatedCost, pricePerKwh }
   }, [data, tariff])
+
   const consumptionLevel = getConsumptionLevel(metrics.total, period)
+  const residenceOptions = units.map((unit) => ({
+    id: unit.id,
+    name: unit.name,
+    rooms: unit.rooms.map((room) => room.name),
+  }))
 
   function navigateTo(page: ActivePage) {
     setActivePage(page)
     setIsMenuOpen(false)
   }
 
+  function handleUpdateUnit(unitId: string, updates: Partial<Omit<ResidenceUnit, 'rooms'>>) {
+    setUnits((current) =>
+      current.map((unit) => (unit.id === unitId ? { ...unit, ...updates } : unit)),
+    )
+  }
+
+  function handleAddUnit() {
+    const nextUnit: ResidenceUnit = {
+      id: `unit-${Date.now()}`,
+      name: `Nova residência ${units.length + 1}`,
+      state: 'SP',
+      city: '',
+      residents: 1,
+      rooms: [{ id: `room-${Date.now()}`, name: 'Novo cômodo' }],
+    }
+
+    setUnits((current) => [...current, nextUnit])
+    setSelectedUnitId(nextUnit.id)
+    setSelectedState(nextUnit.state as BrazilianStateCode)
+  }
+
+  function handleAddRoom(unitId: string) {
+    setUnits((current) =>
+      current.map((unit) =>
+        unit.id === unitId
+          ? {
+              ...unit,
+              rooms: [
+                ...unit.rooms,
+                { id: `room-${Date.now()}`, name: `Cômodo ${unit.rooms.length + 1}` },
+              ],
+            }
+          : unit,
+      ),
+    )
+  }
+
+  function handleUpdateRoom(unitId: string, roomId: string, name: string) {
+    setUnits((current) =>
+      current.map((unit) =>
+        unit.id === unitId
+          ? {
+              ...unit,
+              rooms: unit.rooms.map((room) => (room.id === roomId ? { ...room, name } : room)),
+            }
+          : unit,
+      ),
+    )
+  }
+
+  function handleSelectUnit(unitId: string) {
+    setSelectedUnitId(unitId)
+    const nextUnit = units.find((unit) => unit.id === unitId)
+
+    if (nextUnit && stateOptions.some((state) => state.value === nextUnit.state)) {
+      setSelectedState(nextUnit.state as BrazilianStateCode)
+    }
+  }
+
+  function handleAddDevice() {
+    if (!deviceForm.device.trim() || !deviceForm.smartPlugName.trim()) {
+      return
+    }
+
+    setDeviceData((current) => [
+      ...current,
+      createNewDevice(period, { ...deviceForm, room: selectedDeviceRoom }),
+    ])
+
+    setDeviceForm({
+      device: '',
+      smartPlugName: '',
+      residenceId: selectedUnitId,
+      room: selectedUnit?.rooms[0]?.name ?? '',
+    })
+  }
+
+  function handleUpdateDevice(deviceId: string, updates: Partial<ManagedDevice>) {
+    setDeviceData((current) =>
+      current.map((item) => (item.id === deviceId ? { ...item, ...updates } : item)),
+    )
+  }
+
+  function handleDeleteDevice(deviceId: string) {
+    setDeviceData((current) => current.filter((item) => item.id !== deviceId))
+  }
+
+  function handleSaveProfile() {
+    setSelectedState((selectedUnit?.state as BrazilianStateCode) ?? 'SP')
+  }
+
   function renderActivePage() {
     if (activePage === 'profile') {
-      return <ProfilePage onUnitNameChange={setUnitName} unitName={unitName} />
+      return (
+        <ProfilePage
+          onAddRoom={handleAddRoom}
+          onAddUnit={handleAddUnit}
+          onSave={handleSaveProfile}
+          onSelectUnit={handleSelectUnit}
+          onUpdateRoom={handleUpdateRoom}
+          onUpdateUnit={handleUpdateUnit}
+          selectedUnit={selectedUnit}
+          selectedUnitId={selectedUnitId}
+          units={units}
+        />
+      )
     }
 
     if (activePage === 'history') {
@@ -161,7 +382,7 @@ export default function Dashboard() {
     }
 
     if (activePage === 'settings') {
-      return <SettingsPage />
+      return <SettingsPage onSettingsChange={setSettings} settings={settings} />
     }
 
     return (
@@ -172,9 +393,9 @@ export default function Dashboard() {
               <img src="/smart-energy-logo.avif" alt="Smart Energy Platform" />
               <p className="eyebrow">Smart Energy Platform</p>
             </div>
-            <h1>Consumo residencial</h1>
+            <h1>Consumo de energia residencial</h1>
             <p className="header-copy">
-              Visão objetiva do consumo, custos estimados e picos por período.
+              Visão clara do consumo, do custo estimado e dos dispositivos que mais pesam na conta.
             </p>
           </div>
 
@@ -203,9 +424,7 @@ export default function Dashboard() {
           </article>
           <article>
             <span>Média do período</span>
-            <strong>
-              {metrics.average.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kWh
-            </strong>
+            <strong>{metrics.average.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kWh</strong>
           </article>
           <article>
             <span>Maior pico</span>
@@ -241,6 +460,10 @@ export default function Dashboard() {
                     })}
                     /kWh
                   </strong>
+                  <small className={`flag-badge ${tariff?.flag ?? 'verde'}`}>
+                    <i className="flag-dot" />
+                    {getFlagLabel(tariff?.flag ?? 'verde')}
+                  </small>
                 </div>
                 <label>
                   Estado
@@ -268,17 +491,6 @@ export default function Dashboard() {
                   </button>
                 ))}
               </section>
-              <div className="level-legend" aria-label="Legenda de consumo">
-                <span>
-                  <i className="low" /> Baixo
-                </span>
-                <span>
-                  <i className="medium" /> Moderado
-                </span>
-                <span>
-                  <i className="high" /> Alto
-                </span>
-              </div>
               {isLoading && <span className="loading-pill">Carregando</span>}
             </div>
           </div>
@@ -289,12 +501,90 @@ export default function Dashboard() {
         <section className="chart-section">
           <div className="section-heading">
             <div>
-              <h2>Consumo por dispositivo</h2>
-              <p>Distribuição estimada por smart plug conectada</p>
+              <h2>Cadastro de dispositivos</h2>
+              <p>Associe produtos e smart plugs a uma residência e a um cômodo.</p>
             </div>
           </div>
 
-          <DeviceConsumptionChart data={deviceData} pricePerKwh={metrics.pricePerKwh} />
+          <div className="device-registration-grid">
+            <label>
+              Produto
+              <input
+                onChange={(event) =>
+                  setDeviceForm((current) => ({ ...current, device: event.target.value }))
+                }
+                placeholder="Ex.: Cafeteira"
+                type="text"
+                value={deviceForm.device}
+              />
+            </label>
+            <label>
+              Smart plug
+              <input
+                onChange={(event) =>
+                  setDeviceForm((current) => ({ ...current, smartPlugName: event.target.value }))
+                }
+                placeholder="Ex.: Plug cozinha 02"
+                type="text"
+                value={deviceForm.smartPlugName}
+              />
+            </label>
+            <label>
+              Residência
+              <select
+                onChange={(event) => {
+                  const nextUnit = units.find((unit) => unit.id === event.target.value)
+                  setDeviceForm((current) => ({
+                    ...current,
+                    residenceId: event.target.value,
+                    room: nextUnit?.rooms[0]?.name ?? '',
+                  }))
+                }}
+                value={deviceForm.residenceId}
+              >
+                {units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Cômodo
+              <select
+                onChange={(event) =>
+                  setDeviceForm((current) => ({ ...current, room: event.target.value }))
+                }
+                value={selectedDeviceRoom}
+              >
+                {availableDeviceRooms.map((room) => (
+                  <option key={room.id} value={room.name}>
+                    {room.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="primary-action full-width" onClick={handleAddDevice} type="button">
+              + Adicionar dispositivo
+            </button>
+          </div>
+        </section>
+
+        <section className="chart-section">
+          <div className="section-heading">
+            <div>
+              <h2>Consumo por dispositivo</h2>
+              <p>Clique em um dispositivo para ver o histórico, editar os dados ou excluir.</p>
+            </div>
+          </div>
+
+          <DeviceConsumptionChart
+            data={deviceData}
+            onDeleteDevice={handleDeleteDevice}
+            onUpdateDevice={handleUpdateDevice}
+            pricePerKwh={metrics.pricePerKwh}
+            residences={residenceOptions}
+          />
         </section>
       </>
     )
@@ -366,8 +656,8 @@ export default function Dashboard() {
         />
       )}
 
-      <main className="dashboard">
-        <section className="topbar">
+      <div className="workspace">
+        <div className="menu-rail">
           <button
             aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
             className="menu-button"
@@ -378,14 +668,28 @@ export default function Dashboard() {
             <span />
             <span />
           </button>
+        </div>
 
-          <div className="topbar-actions">
-            <span>{unitName}</span>
-          </div>
-        </section>
+        <main className="dashboard">
+          <section className="topbar">
+            <div className="topbar-spacer" />
+            <div className="topbar-actions unit-picker">
+              <label>
+                Local selecionado
+                <select onChange={(event) => handleSelectUnit(event.target.value)} value={selectedUnitId}>
+                  {units.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
 
-        {renderActivePage()}
-      </main>
+          {renderActivePage()}
+        </main>
+      </div>
     </div>
   )
 }

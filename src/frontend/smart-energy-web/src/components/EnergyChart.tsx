@@ -1,4 +1,4 @@
-import type { EnergyConsumptionPoint } from '../services/energyService'
+﻿import type { EnergyConsumptionPoint } from '../services/energyService'
 
 type EnergyChartProps = {
   data: EnergyConsumptionPoint[]
@@ -15,8 +15,8 @@ function getConsumptionLevel(consumption: number, maxValue: number) {
 
 export default function EnergyChart({ data, pricePerKwh }: EnergyChartProps) {
   const width = 900
-  const height = 360
-  const padding = { top: 28, right: 28, bottom: 54, left: 58 }
+  const height = 380
+  const padding = { top: 40, right: 44, bottom: 56, left: 58 }
   const chartWidth = width - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
   const maxValue = Math.max(...data.map((item) => item.consumption), 1)
@@ -73,63 +73,52 @@ export default function EnergyChart({ data, pricePerKwh }: EnergyChartProps) {
         <path className="chart-area" d={areaPath} />
         <path className="chart-line" d={linePath} />
 
-        {points.map((point) => (
-          <g className="chart-point" key={point.label}>
-            <line
-              className="x-marker"
-              x1={point.x}
-              x2={point.x}
-              y1={padding.top + chartHeight}
-              y2={padding.top + chartHeight + 6}
-            />
-            <text className="axis-label" x={point.x} y={height - 22} textAnchor="middle">
-              {point.label}
-            </text>
-            <circle
-              className={`chart-dot ${getConsumptionLevel(point.consumption, maxValue)}`}
-              cx={point.x}
-              cy={point.y}
-              r="6"
-            />
-            <g className="point-tooltip">
-              <rect
-                className="tooltip-box"
-                x={Math.min(Math.max(point.x - 58, padding.left), width - padding.right - 116)}
-                y={Math.max(point.y - 62, 8)}
-                width="116"
-                height="56"
-                rx="8"
+        {points.map((point) => {
+          const tooltipWidth = 146
+          const tooltipHeight = 64
+          const tooltipX = Math.min(
+            Math.max(point.x - tooltipWidth / 2, padding.left),
+            width - padding.right - tooltipWidth,
+          )
+          const tooltipY = Math.max(point.y - 80, 12)
+          const tooltipCenterX = tooltipX + tooltipWidth / 2
+
+          return (
+            <g className="chart-point" key={point.label}>
+              <line
+                className="x-marker"
+                x1={point.x}
+                x2={point.x}
+                y1={padding.top + chartHeight}
+                y2={padding.top + chartHeight + 6}
               />
-              <text
-                className="tooltip-label"
-                x={Math.min(Math.max(point.x, padding.left + 58), width - padding.right - 58)}
-                y={Math.max(point.y - 39, 31)}
-                textAnchor="middle"
-              >
+              <text className="axis-label" x={point.x} y={height - 22} textAnchor="middle">
                 {point.label}
               </text>
-              <text
-                className="tooltip-value"
-                x={Math.min(Math.max(point.x, padding.left + 58), width - padding.right - 58)}
-                y={Math.max(point.y - 22, 47)}
-                textAnchor="middle"
-              >
-                {point.consumption.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kWh
-              </text>
-              <text
-                className="tooltip-money"
-                x={Math.min(Math.max(point.x, padding.left + 58), width - padding.right - 58)}
-                y={Math.max(point.y - 6, 61)}
-                textAnchor="middle"
-              >
-                {(point.consumption * pricePerKwh).toLocaleString('pt-BR', {
-                  currency: 'BRL',
-                  style: 'currency',
-                })}
-              </text>
+              <circle
+                className={`chart-dot ${getConsumptionLevel(point.consumption, maxValue)}`}
+                cx={point.x}
+                cy={point.y}
+                r="6"
+              />
+              <g className="point-tooltip">
+                <rect className="tooltip-box" x={tooltipX} y={tooltipY} width={tooltipWidth} height={tooltipHeight} rx="10" />
+                <text className="tooltip-label" x={tooltipCenterX} y={tooltipY + 18} textAnchor="middle">
+                  {point.label}
+                </text>
+                <text className="tooltip-value" x={tooltipCenterX} y={tooltipY + 37} textAnchor="middle">
+                  {point.consumption.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kWh
+                </text>
+                <text className="tooltip-money" x={tooltipCenterX} y={tooltipY + 54} textAnchor="middle">
+                  {(point.consumption * pricePerKwh).toLocaleString('pt-BR', {
+                    currency: 'BRL',
+                    style: 'currency',
+                  })}
+                </text>
+              </g>
             </g>
-          </g>
-        ))}
+          )
+        })}
 
         <text className="axis-title" x={padding.left} y="18">
           kWh consumidos
