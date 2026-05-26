@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SmartEnergy.Domain.Entities;
 
-namespace SmartEnergy.Infrastructure.Data
+namespace SmartEnergy.Infrastructure
 {
     public class AppDbContext : DbContext
     {
@@ -9,7 +10,11 @@ namespace SmartEnergy.Infrastructure.Data
         {
         }
 
-        //public DbSet<Device> Devices { get; set; }
-        //public DbSet<EnergyReading> EnergyReadings { get; set; }
+        public DbSet<Medicao> Medicoes { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Medicao>().ToTable("tb_medicoes");
+        }
     }
 }

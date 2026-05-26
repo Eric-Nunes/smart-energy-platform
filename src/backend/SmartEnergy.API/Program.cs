@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SmartEnergy.Infrastructure;
 using SmartEnergy.API.Services;
-using SmartEnergy.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,7 +26,23 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHostedService<MqttSubscriberService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
 var app = builder.Build();
+
+app.UseCors("AllowFrontend");
 
 // Middlewares
 if (app.Environment.IsDevelopment())
