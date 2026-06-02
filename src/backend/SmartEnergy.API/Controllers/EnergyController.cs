@@ -2,6 +2,7 @@
 using SmartEnergy.API.Services;
 using SmartEnergy.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using SmartEnergy.Domain.Entities;
 
 namespace SmartEnergy.API.Controllers;
 
@@ -24,7 +25,7 @@ public class EnergyController : ControllerBase
     public async Task<IActionResult> GetConsumption(
         [FromQuery] string period = "day")
     {
-        var medicoes = await _context.Medicoes.OrderBy(m => m.Data_Hora).ToListAsync();
+        List<Medicao> medicoes = await _context.Medicoes.OrderBy(m => m.Data_Hora).ToListAsync();
 
         var resultado = medicoes
             .GroupBy(m => m.Data_Hora.Hour)
