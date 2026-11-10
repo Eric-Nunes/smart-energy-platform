@@ -52,3 +52,5 @@ CREATE TABLE tarifas_energia (
 );
 
 select * from tb_medicoes;
+
+truncate table tb_medicoes;

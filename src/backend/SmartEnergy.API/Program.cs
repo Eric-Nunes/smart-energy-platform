@@ -6,6 +6,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Services
 builder.Services.AddControllers();
+builder.Services.AddSingleton<MonitoramentoAtual>();
+builder.Services.AddScoped<ConsumoEnergiaService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

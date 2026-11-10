@@ -5,10 +5,10 @@ using System.Text.Json;
 
 var mqttSettings = new MqttConfig
 {
-    Broker = "link",
+    Broker = "0fff694999c9490e9fbd847167c93371.s1.eu.hivemq.cloud",
     Porta = 8883,
-    Usuario = "tcc_mqtt",
-    Senha = "senha"
+    Usuario = "x",
+    Senha = "x"
 };
 
 var mqttService = new MqttPublisher();
@@ -27,7 +27,7 @@ while (true)
             Tensao = Math.Round(random.NextDouble() * (127 - 110) + 110, 2),
             Corrente = Math.Round(random.NextDouble() * 10, 2),
             Potencia = Math.Round(random.NextDouble() * 1500, 2),
-            Consumo_Kwh = Math.Round(random.NextDouble() * 5, 2),
+            Consumo_Kwh = Math.Round(random.NextDouble() * 0.1, 1),
             Data_Hora = DateTime.Now
         };
 
