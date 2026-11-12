@@ -6,6 +6,7 @@ export type HistoryPeriod = 'all' | 'hour' | 'today' | '7days' | 'month'
 type EnergyChartProps = {
   data: EnergyConsumptionPoint[]
   period: HistoryPeriod
+  referenceTime?: number
 }
 
 type ChartPoint = EnergyConsumptionPoint & { hasData: boolean }
@@ -71,8 +72,8 @@ function getBucketDate(date: Date, bucketSize: BucketSize) {
   return bucketDate
 }
 
-function aggregateByPeriod(data: EnergyConsumptionPoint[], period: HistoryPeriod): ChartPoint[] {
-  const now = new Date()
+function aggregateByPeriod(data: EnergyConsumptionPoint[], period: HistoryPeriod, referenceTime?: number): ChartPoint[] {
+  const now = new Date(referenceTime ?? Date.now())
   const start = new Date(now)
   if (period === 'hour') start.setHours(now.getHours() - 1)
   if (period === 'today') start.setHours(0, 0, 0, 0)
@@ -187,7 +188,7 @@ function getChartTitle(period: HistoryPeriod) {
   return 'Consumo agrupado conforme o período disponível (kWh)'
 }
 
-function getChartRange(period: HistoryPeriod, points: ChartPoint[]) {
+function getChartRange(period: HistoryPeriod, points: ChartPoint[], referenceTime?: number) {
   if (period === 'all') {
     return {
       start: new Date(points[0].dataHora).getTime(),
@@ -195,7 +196,7 @@ function getChartRange(period: HistoryPeriod, points: ChartPoint[]) {
     }
   }
 
-  const end = Date.now()
+  const end = referenceTime ?? Date.now()
   const startDate = new Date(end)
 
   if (period === 'hour') {
@@ -253,8 +254,11 @@ function getVisibleLabelIndexes(points: PositionedPoint[], _labelStep: number) {
   return visible
 }
 
-export default function EnergyChart({ data, period }: EnergyChartProps) {
-  const chartData = useMemo(() => aggregateByPeriod(data, period), [data, period])
+export default function EnergyChart({ data, period, referenceTime }: EnergyChartProps) {
+  const chartData = useMemo(
+    () => aggregateByPeriod(data, period, referenceTime),
+    [data, period, referenceTime],
+  )
 
   if (chartData.length === 0) {
     return <p className="empty-state">Não há medições nesse período. Escolha outro intervalo ou aguarde novas leituras do aparelho.</p>
@@ -272,7 +276,7 @@ export default function EnergyChart({ data, period }: EnergyChartProps) {
   const timestamps = chartData.map((item) =>
     new Date(item.dataHora).getTime()
   )
-  const chartRange = getChartRange(period, chartData)
+  const chartRange = getChartRange(period, chartData, referenceTime)
   const minTimestamp = chartRange.start
   const maxTimestamp = chartRange.end
   const timeSpan = maxTimestamp - minTimestamp

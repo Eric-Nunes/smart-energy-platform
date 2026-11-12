@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [now, setNow] = useState(() => Date.now())
   const [historyPeriod, setHistoryPeriod] = useState<'all' | 'hour' | 'today' | '7days' | 'month'>('all')
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const [historyReferenceTime, setHistoryReferenceTime] = useState<number | null>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [monthlyProgress, setMonthlyProgress] = useState<ProgressoMensal | null>(null)
   const [monthlyProgressError, setMonthlyProgressError] = useState<string | null>(null)
@@ -169,6 +170,7 @@ export default function Dashboard() {
     return () => clearInterval(timerId)
   }, [activePage])
 
+  /*
   // Atualiza os históricos mensal e consolidado periodicamente, além do botão manual.
   useEffect(() => {
     if (activePage !== 'dashboard') return
@@ -176,7 +178,7 @@ export default function Dashboard() {
       setHistoryRefreshKey((current) => current + 1)
     }, 60000)
     return () => clearInterval(timerId)
-  }, [activePage])
+  }, [activePage])*/
 
   // Consulta o histórico individual de cada aparelho uma única vez por atualização.
   // A partir dele, monta tanto o histórico consolidado quanto o consumo do mês atual.
@@ -219,6 +221,7 @@ export default function Dashboard() {
             .sort((a, b) => new Date(a.dataHora).getTime() - new Date(b.dataHora).getTime()),
         }
         setHistory(combinedHistory)
+        setHistoryReferenceTime(Date.now())
 
         const [yearText, monthText] = currentMonthKey.split('-')
         const targetYear = Number(yearText)
@@ -263,9 +266,20 @@ export default function Dashboard() {
     return () => {
       isCurrentRequest = false
     }
-  }, [activePage, deviceIdsKey, historyRefreshKey, isLoadingDevices, currentMonthKey, monthlyProgress?.tarifaKwh])
+  }, [activePage, deviceIdsKey, historyRefreshKey, isLoadingDevices, currentMonthKey])
 
-  
+  // Recalcula somente os custos exibidos quando a tarifa muda,
+  // sem consultar novamente o histórico de medições.
+  useEffect(() => {
+    const tarifa = monthlyProgress?.tarifaKwh ?? 0
+
+    setMonthlyDeviceConsumption((current) =>
+      current.map((item) => ({
+        ...item,
+        estimatedCost: item.consumption * tarifa,
+      })),
+    )
+  }, [monthlyProgress?.tarifaKwh])
 
   useEffect(() => {
     if (activePage !== 'dashboard') return
@@ -293,7 +307,7 @@ export default function Dashboard() {
 
           timeoutId = setTimeout(() => {
             void refreshMonthlyProgress()
-          }, 60000)
+          }, 5000)
         }
       }
     }
@@ -726,7 +740,7 @@ export default function Dashboard() {
           {!isLoadingDevices && !apiError && devices.length === 0 && (
             <p className="empty-state">A API não retornou aparelhos cadastrados.</p>
           )}
-          <EnergyChart data={history?.historico ?? []} period={historyPeriod} />
+          <EnergyChart data={history?.historico ?? []} period={historyPeriod} referenceTime={historyReferenceTime ?? undefined} />
           {history && (
             <p className="chart-footnote">
               Visão consolidada: {history.quantidadeMedicoes.toLocaleString('pt-BR')} medições recebidas de todos os aparelhos;{' '}
